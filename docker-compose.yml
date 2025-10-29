@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+    ledger:
+        build:
+            context: ./src
+            dockerfile: Dockerfile.ledger
+        ports:
+            - "${PORT_LEDGER:-4000}:4000"
+        environment:
+            - DB_PATH=${DB_PATH:-data/ledger.db}
+            - KEYS_DIR=${KEYS_DIR:-src/keys}
+        volumes:
+            - ./data:/app/data
+            - ./src/keys:/app/src/keys
+    ra:
+        build:
+            context: ./src
+            dockerfile: Dockerfile.ra
+        ports:
+            - "${PORT_RA:-4100}:4100"
+        depends_on:
+            - ledger
+        environment:
+            - LEDGER_HOST=ledger
+            - KEYS_DIR=${KEYS_DIR:-src/keys}

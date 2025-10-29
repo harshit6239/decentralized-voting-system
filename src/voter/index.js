@@ -1,0 +1,1 @@
+// Voter-facing functionality stub.

@@ -1,0 +1,17 @@
+{
+  "ballotPlain": {
+    "electionId": "e-demo",
+    "voterId": "demo-voter-1",
+    "choice": "Meridian",
+    "timestamp": "2025-10-29T09:43:17.048Z"
+  },
+  "receipt": {
+    "receiptId": "c311228c-f457-4f80-bab4-22ccf5ae2f9c",
+    "ledgerIndex": 349,
+    "commitment": "1596522fba7b7d91eb5f46083eed1e8f694af746ec78df2db83df813aa4b0d6e",
+    "electionId": "e-demo",
+    "timestamp": "2025-10-29T09:43:17.054Z",
+    "signature": "AJ/XoWx6ZbQxH+VXVmwb9FuaeYjo25EyQ8obC89sfZZ7L/ppPQYk1h7mt6ovXZb4hXX+PigFYdxYtsnxgIJd+pDGqF3Nw2ITOqvaO7h9xZB2TKyWMAqW+S3Z/Lx2x8DfBr7zDazy5BfPFRD2c7TXdCUvF0nBTzjTDJG+S0ADCmrOZ8Rmm1efIJuPL5PSGHnGXcff36yusic6kdCcs/VWonYYeFrt/7NUsJwK23HOgADZJ3awEEedBJ7Fxh32DrB5aDPLd4bGYRVcRv7ouIjYmlJYCLGbSh15JACNKQJ+osEVCElyzztWrijue2qV54yp7aS9tYyMNgEpDvsKQceTag=="
+  },
+  "timestamp": "2025-10-29T09:43:17.059Z"
+}
