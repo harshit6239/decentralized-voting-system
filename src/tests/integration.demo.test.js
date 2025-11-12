@@ -80,24 +80,20 @@ describe("in-process demo integration", () => {
             .get(result.electionId).count;
         expect(ledgerCount).toBe(expectedVotes);
 
-        result.artifacts.cipherFiles.forEach((relative) => {
-            expect(fs.existsSync(resolvePath(relative))).toBe(true);
+        result.artifacts.cipherFilesStatus.forEach((entry) => {
+            expect(entry.exists).toBe(true);
         });
 
-        result.artifacts.vvpatFiles.forEach((relative) => {
-            expect(fs.existsSync(resolvePath(relative))).toBe(true);
+        result.artifacts.vvpatFilesStatus.forEach((entry) => {
+            expect(entry.exists).toBe(true);
         });
 
-        if (result.artifacts.tallyFile) {
-            expect(fs.existsSync(resolvePath(result.artifacts.tallyFile))).toBe(
-                true
-            );
+        if (result.artifacts.tallyFileStatus) {
+            expect(result.artifacts.tallyFileStatus.exists).toBe(true);
         }
 
-        if (result.artifacts.auditReportFile) {
-            expect(
-                fs.existsSync(resolvePath(result.artifacts.auditReportFile))
-            ).toBe(true);
+        if (result.artifacts.auditReportStatus) {
+            expect(result.artifacts.auditReportStatus.exists).toBe(true);
         }
 
         cleanDemo({ quiet: true, electionId });

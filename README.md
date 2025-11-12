@@ -51,7 +51,7 @@ During the demo the following locations receive generated data:
 -   `data/ledger.jsonl` – append-only ledger log (one JSON object per line)
 -   `data/tally-*.json` – signed tally reports
 -   `data/audit-report-*.json` – audit results
--   `src/terminal_vvpats/*.json` – virtual VVPAT receipts tied to commitments
+-   `src/terminal_vvpats/*.json` – virtual VVPAT receipts tied to commitments (ballot choices only; voter identifiers are stripped and files are ignored by git)
 -   SQLite database: `data/ledger.db`
 
 The cleanup scripts remove the demo-specific rows and files listed above, recreating the necessary directories for subsequent runs.

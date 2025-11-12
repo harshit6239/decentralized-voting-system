@@ -124,7 +124,7 @@ const orderResults = (countsMap) =>
 /**
  * Execute a tally for the provided election identifier.
  * @param {string} electionId
- * @param {{ privateKeyPath?: string, dbPath?: string }} [options]
+ * @param {{ privateKeyPath?: string, privateKeyShares?: Array<any>, dbPath?: string }} [options]
  * @returns {Promise<Record<string, any>>}
  */
 const runTally = async (electionId, options = {}) => {
@@ -132,7 +132,11 @@ const runTally = async (electionId, options = {}) => {
         throw new Error("electionId is required for tally");
     }
 
-    const { privateKeyPath: privateKeyOverride, dbPath } = options;
+    const {
+        privateKeyPath: privateKeyOverride,
+        privateKeyShares,
+        dbPath,
+    } = options;
     const { db, dispose } = getDatabase(dbPath);
 
     try {
@@ -189,7 +193,8 @@ const runTally = async (electionId, options = {}) => {
             const plaintext = decryptWithPrivateKey(
                 ciphertextBase64,
                 nonceB64,
-                electionKeyPath
+                electionKeyPath,
+                privateKeyShares
             );
 
             let ballot;

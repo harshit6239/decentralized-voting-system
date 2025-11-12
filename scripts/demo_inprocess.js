@@ -79,15 +79,45 @@ const summarizeArtifacts = ({
     vvpatFiles,
     tallyFile,
     auditReportFile,
-}) => ({
-    cipherFiles: cipherFiles.map(relativePath),
-    vvpatFiles: vvpatFiles.map(relativePath),
-    ledgerLog: relativePath(LEDGER_LOG_PATH),
-    tallyFile: tallyFile ? relativePath(tallyFile) : null,
-    auditReportFile: auditReportFile ? relativePath(auditReportFile) : null,
-    tokensDir: relativePath(TOKENS_DIR),
-    ciphersDir: relativePath(CIPHER_DIR),
-});
+}) => {
+    const cipherSummaries = cipherFiles.map((absolutePath) => ({
+        path: relativePath(absolutePath),
+        exists: fs.existsSync(absolutePath),
+    }));
+
+    const vvpatSummaries = vvpatFiles.map((absolutePath) => ({
+        path: relativePath(absolutePath),
+        exists: fs.existsSync(absolutePath),
+    }));
+
+    const tallySummary = tallyFile
+        ? {
+              path: relativePath(tallyFile),
+              exists: fs.existsSync(tallyFile),
+          }
+        : null;
+
+    const auditSummary = auditReportFile
+        ? {
+              path: relativePath(auditReportFile),
+              exists: fs.existsSync(auditReportFile),
+          }
+        : null;
+
+    return {
+        cipherFiles: cipherSummaries.map((entry) => entry.path),
+        vvpatFiles: vvpatSummaries.map((entry) => entry.path),
+        ledgerLog: relativePath(LEDGER_LOG_PATH),
+        tallyFile: tallySummary ? tallySummary.path : null,
+        auditReportFile: auditSummary ? auditSummary.path : null,
+        tokensDir: relativePath(TOKENS_DIR),
+        ciphersDir: relativePath(CIPHER_DIR),
+        cipherFilesStatus: cipherSummaries,
+        vvpatFilesStatus: vvpatSummaries,
+        tallyFileStatus: tallySummary,
+        auditReportStatus: auditSummary,
+    };
+};
 
 const ensureRaKeys = () => {
     if (!fs.existsSync(raPrivateKeyPath) || !fs.existsSync(raPublicKeyPath)) {
@@ -172,8 +202,10 @@ const runDemoInProcess = async (options = {}) => {
             timestamp: nowISO(),
         };
 
+        const { voterId: _omittedVoter, ...anonymousBallot } = ballotPlain;
+
         const { ciphertextBase64, nonceBase64 } = encryptWithPublicKey(
-            JSON.stringify(ballotPlain),
+            JSON.stringify(anonymousBallot),
             electionPrivateKeyPath
         );
 
@@ -220,7 +252,6 @@ const runDemoInProcess = async (options = {}) => {
         appendLedgerLog({
             ...ledgerRecord,
             ledgerIndex,
-            tokenId: tokenRecord.tokenId,
             nonceB64: nonceBase64,
             voterIndex: index,
             receipt,
@@ -230,7 +261,7 @@ const runDemoInProcess = async (options = {}) => {
 
         const vvpatPath = writeVvpat({
             commitment,
-            ballotPlain,
+            ballotPlain: anonymousBallot,
             receipt,
             signature,
         });
@@ -239,9 +270,10 @@ const runDemoInProcess = async (options = {}) => {
         cipherFiles.push(cipherFilePath);
         vvpatFiles.push(vvpatPath);
         log(
-            `Recorded ballot for ${
-                tokenRecord.voterId
-            } (commitment ${commitment.slice(0, 12)}...).`
+            `Recorded ballot ${index + 1} (commitment ${commitment.slice(
+                0,
+                12
+            )}...).`
         );
     });
 

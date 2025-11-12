@@ -130,8 +130,10 @@ const seedBallot = ({
         timestamp: nowISO(),
     };
 
+    const { voterId: _omitForCipher, ...anonymousBallot } = ballot;
+
     const { ciphertextBase64, nonceBase64 } = encryptWithPublicKey(
-        JSON.stringify(ballot),
+        JSON.stringify(anonymousBallot),
         electionPrivateKeyPath
     );
 
@@ -160,10 +162,11 @@ const seedBallot = ({
         storedAt: nowISO(),
     });
 
+    const defaultVvpatBallot = { ...anonymousBallot };
     const vvpatBallot =
         typeof vvpatBallotOverride === "function"
-            ? vvpatBallotOverride({ ...ballot })
-            : { ...ballot };
+            ? vvpatBallotOverride({ ...defaultVvpatBallot })
+            : defaultVvpatBallot;
 
     const vvpatPayload = {
         ballotPlain: vvpatBallot,

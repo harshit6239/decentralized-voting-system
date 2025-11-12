@@ -17,9 +17,9 @@ Modern elections must guarantee voter privacy, prevent double voting, and remain
 The prototype decomposes the election workflow into modular services and libraries:
 
 1. **Registration Authority (RA):** Issues signed JWT tokens to eligible voters, embedding election metadata and expiration claims.
-2. **Ledger Service:** Authenticates tokens, persists encrypted ballots, returns signed receipts, and exposes verification endpoints.
+2. **Ledger Service:** Authenticates tokens, persists encrypted ballots, returns signed receipts, and exposes verification endpoints without ever storing voter or token identifiers alongside ciphertext.
 3. **Tally and Audit Engine:** Decrypts ballots after the election closes, computes results, signs tally artifacts, and runs deterministic audits.
-4. **Voter Toolkit:** Generates voter key material, encrypts ballots against election keys, submits to the ledger, and records VVPAT receipts.
+4. **Voter Toolkit:** Generates voter key material, encrypts ballots against election keys, submits to the ledger, and records anonymized VVPAT receipts.
 5. **Demo and Cleanup Scripts:** Provide deterministic end-to-end flows, artifact inspection, and environment reset.
 
 The design enforces separation of duties, cryptographic linking between steps, and persistent transparent records for review.
@@ -73,7 +73,7 @@ The design enforces separation of duties, cryptographic linking between steps, a
 
 -   **`server.js`**
 
-    -   `/submit`: Validates payloads, verifies JWT signatures, ensures election alignment, marks tokens as used, inserts ledger rows, writes cipher blobs, signs receipts, and appends JSONL ledger entries with metadata.
+    -   `/submit`: Validates payloads, verifies JWT signatures, ensures election alignment, marks tokens as used, inserts ledger rows, writes cipher blobs, signs receipts, and appends JSONL ledger entries with metadata (nonces, receipts, timestamps—no token identifiers).
     -   `/verify/:receiptId`: Fetches ledger entries, retrieves stored signatures, and confirms authenticity using the ledger public key.
     -   `/tally`: Delegates to the tally engine with optional admin token guard.
     -   `/verify-token/:tokenId` and `/verify-receipt/:receiptId`: Convenience checks for observers.
@@ -109,7 +109,7 @@ The design enforces separation of duties, cryptographic linking between steps, a
 
 -   **`voter.js`**
 
-    -   Generates voter-specific key material, constructs ballot objects, encrypts them with election public keys, submits to ledger (`axios.post` with retryable errors), and records VVPAT JSON files.
+    -   Generates voter-specific key material, constructs ballot objects, encrypts them with election public keys, submits to ledger (`axios.post` with retryable errors), and records anonymized VVPAT JSON files.
     -   Provides `DEFAULT_LEDGER_URL`, `recordVvpat`, and key-path helpers consumed by CLI and tests.
 
 -   **`cli.js`**
@@ -140,10 +140,10 @@ The design enforces separation of duties, cryptographic linking between steps, a
 
 -   `data/ciphers/<commitment>.bin` - sealed ballot payloads (binary), stored with absolute references for reliability.
 -   `data/tokens/<tokenId>.jwt` - signed voter tokens for distribution or audit.
--   `data/ledger.jsonl` - append-only audit log with nonces, receipts, signatures, and storage metadata.
+-   `data/ledger.jsonl` - append-only audit log with nonces, receipts, signatures, and storage metadata (no token identifiers are recorded).
 -   `data/tally-<electionId>-<timestamp>.json` - signed tally outputs containing totals and cryptographic signatures.
 -   `data/audit-report-<electionId>-<timestamp>.json` - audit documentation and sample results.
--   `src/terminal_vvpats/<commitment>.json` - VVPAT snapshots linking plain ballots to signed receipts.
+-   `src/terminal_vvpats/<commitment>.json` - VVPAT snapshots linking anonymized ballot choices to signed receipts (directory retained via `.gitkeep`; JSON artifacts are ignored by git).
 -   `src/keys/` - RA, ledger, election, and voter key files encoded as JSON for portability.
 
 ## 6. Cryptographic Toolkit
@@ -151,7 +151,7 @@ The design enforces separation of duties, cryptographic linking between steps, a
 1. **JWT Tokens (RA):** RSA 2048-bit with `RS256`. Claims include `tokenId`, `electionId`, `voterId`, `exp`, and `electionEndsAt`.
 2. **Ballot Encryption:** TweetNaCl sealed box with ephemeral key pairs and 24-byte nonces. Commitments computed via SHA-256 over ciphertext and nonce.
 3. **Ledger Receipts:** RSA-SHA256 signatures over receipt JSON, persisted alongside ledger log entries and returned to voters.
-4. **VVPAT Files:** Store plaintext ballots, signed receipts, and timestamps, enabling external audits.
+4. **VVPAT Files:** Store anonymized ballots (election + choice only), signed receipts, and timestamps, enabling external audits without exposing voter identity.
 5. **Tally Decryption:** After the election window closes, ballots are decrypted using the election private key and logged nonces.
 6. **Audit Sampling:** Deterministic pseudo-random selection seeded with the final ledger commitment, enabling reproducible risk-limiting audits.
 
@@ -171,7 +171,7 @@ The design enforces separation of duties, cryptographic linking between steps, a
 3. **Ballot Preparation**
 
     - Voter constructs a ballot using `buildBallotPlain`, capturing election ID, voter ID, choice, and timestamp.
-    - `encryptBallot` seals the ballot with the election public key, returning ciphertext, nonce, and commitment identifier.
+    - `encryptBallot` seals the ballot with the election public key, automatically omitting the voter identifier from the serialized payload so no stored artifact can reveal voter identity, while returning ciphertext, nonce, and commitment identifier.
 
 4. **Ballot Submission**
 
@@ -181,7 +181,7 @@ The design enforces separation of duties, cryptographic linking between steps, a
 
 5. **VVPAT Recording**
 
-    - Clients call `recordVvpat` (embedded in CLI) to persist a JSON artifact containing the plaintext ballot and signed receipt.
+    - Clients call `recordVvpat` (embedded in CLI) to persist a JSON artifact containing the anonymized ballot (election + choice) and signed receipt.
 
 6. **Tally Generation**
 

@@ -78,8 +78,10 @@ describe("ledger tally", () => {
                 timestamp: nowISO(),
             };
 
+            const { voterId: _dropForCipher, ...anonymousBallot } = ballot;
+
             const { ciphertextBase64, nonceBase64 } = encryptWithPublicKey(
-                JSON.stringify(ballot),
+                JSON.stringify(anonymousBallot),
                 electionPrivateKeyPath
             );
 

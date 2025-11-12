@@ -240,7 +240,6 @@ const createApp = () => {
 
         appendLedgerLog({
             ...ledgerRecord,
-            tokenId,
             ledgerIndex,
             nonceB64,
             receipt,

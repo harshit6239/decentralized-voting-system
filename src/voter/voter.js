@@ -109,7 +109,8 @@ const encryptBallot = (ballotPlain, electionPublicKeyFile) => {
         throw new Error("electionPublicKeyFile is required");
     }
 
-    const plaintext = JSON.stringify(ballotPlain);
+    const { voterId: _omittedVoter, ...anonymousBallot } = ballotPlain;
+    const plaintext = JSON.stringify(anonymousBallot);
     const { ciphertextBase64, nonceBase64 } = encryptWithPublicKey(
         plaintext,
         electionPublicKeyFile
@@ -172,8 +173,9 @@ const submitBallot = async (ballotSubmission, ledgerURL) => {
 const recordVvpat = (commitmentHex, ballotPlain, receipt) => {
     const vvpatPath = path.join(VVPAT_DIR, `${commitmentHex}.json`);
     ensureDir(vvpatPath);
+    const { voterId: _omittedForRecord, ...anonymousBallot } = ballotPlain;
     const entry = {
-        ballotPlain,
+        ballotPlain: anonymousBallot,
         receipt,
         timestamp: nowISO(),
     };

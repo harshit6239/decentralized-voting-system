@@ -127,7 +127,12 @@ const auditElection = async (electionId, options = {}) => {
         throw new Error("electionId is required");
     }
 
-    const { sampleRate = 0.1, minSample = 5, electionPrivKeyPath } = options;
+    const {
+        sampleRate = 0.1,
+        minSample = 5,
+        electionPrivKeyPath,
+        privateKeyShares,
+    } = options;
 
     if (!electionPrivKeyPath) {
         throw new Error("electionPrivKeyPath is required for audit");
@@ -191,7 +196,8 @@ const auditElection = async (electionId, options = {}) => {
                 decryptWithPrivateKey(
                     ciphertextBase64,
                     ledgerEntry.nonceB64,
-                    electionPrivKeyPath
+                    electionPrivKeyPath,
+                    privateKeyShares
                 )
             );
         } catch (error) {

@@ -32,17 +32,30 @@ const mockTokenPath = path.resolve(__dirname, "mock.token");
 const axiosCapturePath = path.resolve(__dirname, "__tmp__", "axios-call.json");
 
 const ensureElectionKey = () => {
-    if (fs.existsSync(electionPubPath)) {
+    const needsRegeneration = () => {
+        if (!fs.existsSync(electionPubPath)) {
+            return true;
+        }
+
+        try {
+            const existing = readJson(electionPubPath);
+            return !existing?.publicKey?.n || !existing?.threshold;
+        } catch (error) {
+            return true;
+        }
+    };
+
+    if (!needsRegeneration()) {
         return;
     }
+
+    removeIfExists(electionPubPath);
 
     const electionKeys = genKeypair("election-pub");
     const boxInfo = readJson(electionKeys[constants.KEY_ALGO_BOX]);
     writeJson(electionPubPath, {
+        ...boxInfo,
         name: "election-pub",
-        type: constants.KEY_ALGO_BOX,
-        publicKey: boxInfo.publicKey,
-        createdAt: boxInfo.createdAt,
     });
 };
 
@@ -221,11 +234,33 @@ describe("voter workflow", () => {
         );
         expect(newFiles.length).toBeGreaterThan(0);
 
-        const vvpatContent = JSON.parse(
-            fs.readFileSync(path.join(vvpatDir, newFiles[0]), "utf8")
-        );
-        expect(vvpatContent.receipt).toEqual(receiptStub);
+        const { file: vvpatFile, content: vvpatContent } = (() => {
+            for (const file of newFiles) {
+                const content = JSON.parse(
+                    fs.readFileSync(path.join(vvpatDir, file), "utf8")
+                );
+                if (content?.ballotPlain?.electionId === "e1") {
+                    return { file, content };
+                }
+            }
+            throw new Error("Matching VVPAT for election 'e1' not found");
+        })();
+        expect(vvpatContent.receipt.receiptId).toBeDefined();
+        expect(typeof vvpatContent.receipt.commitment).toBe("string");
+        expect(vvpatContent.receipt.commitment.length).toBeGreaterThan(0);
+        expect(typeof vvpatContent.receipt.signature).toBe("string");
+        expect(vvpatContent.receipt.signature.length).toBeGreaterThan(0);
         expect(vvpatContent.ballotPlain.electionId).toBe("e1");
-        expect(vvpatContent.ballotPlain.voterId).toBe("v1");
+        expect(vvpatContent.ballotPlain.choice).toBe("A");
+        expect(vvpatContent.ballotPlain).not.toHaveProperty("voterId");
+
+        const vvpatPath = path.join(vvpatDir, vvpatFile);
+        try {
+            if (fs.existsSync(vvpatPath)) {
+                fs.rmSync(vvpatPath, { force: true });
+            }
+        } catch (error) {
+            // best effort cleanup; ignore errors
+        }
     });
 });

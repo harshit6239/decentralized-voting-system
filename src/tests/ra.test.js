@@ -50,6 +50,8 @@ describe("registration authority workflows", () => {
             [cliPath, "issue-token", "--election", electionId, "--voter", "v1"],
             {
                 encoding: "utf8",
+                cwd: process.cwd(),
+                env: { ...process.env },
             }
         );
 

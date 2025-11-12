@@ -3,9 +3,16 @@ const path = require("path");
 const jwt = require("jsonwebtoken");
 const request = require("supertest");
 
+jest.setTimeout(15000);
+
 const { createApp } = require("../ledger/server");
 const { ensureLedgerKeys } = require("../ledger/signing");
-const { generateSigningKeys, issueToken } = require("../ra/tokenService");
+const {
+    generateSigningKeys,
+    issueToken,
+    loadPublicKey,
+    SIGNING_ALGORITHM,
+} = require("../ra/tokenService");
 const {
     insertElection,
     deleteElection,
@@ -17,6 +24,7 @@ const {
     genKeypair,
     encryptWithPublicKey,
     computeCommitment,
+    constants,
 } = require("../common/crypto");
 const { nowISO } = require("../common/utils");
 
@@ -53,11 +61,17 @@ describe("ledger service", () => {
 
     test("accepts submission and returns receipt", async () => {
         const token = issueToken({ electionId, voterId: "v1" });
+        const raPublicKeyPem = loadPublicKey();
+        expect(() =>
+            jwt.verify(token.tokenJwt, raPublicKeyPem, {
+                algorithms: [SIGNING_ALGORITHM],
+            })
+        ).not.toThrow();
         const voterKeys = genKeypair(`ledger-voter-${Date.now()}`);
         const message = JSON.stringify({ selection: "ChoiceA" });
         const { ciphertextBase64, nonceBase64 } = encryptWithPublicKey(
             message,
-            voterKeys.x25519
+            voterKeys[constants.KEY_ALGO_BOX]
         );
         const commitment = computeCommitment(ciphertextBase64, nonceBase64);
         const timestamp = nowISO();
