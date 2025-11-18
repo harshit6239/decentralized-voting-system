@@ -1,4 +1,37 @@
-const Database = require("better-sqlite3");
+const path = require("path");
+
+const tryLoadBetterSqlite3 = () => {
+    const isElectron = Boolean(process?.versions?.electron);
+    const candidates = isElectron
+        ? [
+              path.resolve(
+                  __dirname,
+                  "../../apps/presentation/node_modules/better-sqlite3"
+              ),
+              "better-sqlite3",
+          ]
+        : ["better-sqlite3"];
+
+    const retriableCodes = new Set(["MODULE_NOT_FOUND", "ERR_DLOPEN_FAILED"]);
+
+    let lastError;
+
+    for (const candidate of candidates) {
+        try {
+            return require(candidate);
+        } catch (error) {
+            lastError = error;
+
+            if (!retriableCodes.has(error?.code)) {
+                throw error;
+            }
+        }
+    }
+
+    throw lastError;
+};
+
+const Database = tryLoadBetterSqlite3();
 
 const { resolved } = require("./config");
 const { ensureDir } = require("./utils");

@@ -65,3 +65,10 @@ npm test
 ```
 
 All integration tests run locally without spawning HTTP servers.
+
+Prepare core keys once
+
+node -e "require('./src/ra/tokenService').generateSigningKeys()" (RA JWT keys)
+node -e "require('./src/ledger/signing').ensureLedgerKeys()" (ledger receipt keys)
+
+$env:PYTHON='A:/CODE/btp/1/.venv/Scripts/python.exe'; npx electron-rebuild --force --version 38.1.2 --only better-sqlite3
