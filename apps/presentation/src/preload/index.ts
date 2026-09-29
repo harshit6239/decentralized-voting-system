@@ -27,6 +27,7 @@ const api = {
   issueToken: (payload) => invoke('token:issue', payload),
   castBallot: (payload) => invoke('ballot:cast', payload),
   listLedger: (payload?: { electionId?: string }) => invoke('ledger:list', payload),
+  verifyReceipt: (payload: { receiptId: string }) => invoke('receipt:verify', payload),
   runTally: (payload) => invoke('tally:run', payload),
   runAudit: (payload) => invoke('audit:run', payload)
 }

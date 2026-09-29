@@ -28,6 +28,7 @@ type VoterModule = typeof import('../../../../src/voter/voter.js')
 type TallyModule = typeof import('../../../../src/ledger/tally.js')
 type AuditModule = typeof import('../../../../src/audit/audit.js')
 type TokenModule = typeof import('../../../../src/ra/tokenService.js')
+type VerifyModule = typeof import('../../../../src/ledger/verify.js')
 
 type ThresholdSection = {
   shareFiles?: string[]
@@ -159,6 +160,13 @@ type IssuedToken = {
   issuedAt: string
 }
 
+type ReceiptVerification = {
+  valid: boolean
+  ledgerIndex: number | null
+  commitment: string | null
+  electionId: string | null
+}
+
 const dbModule = loadFromRoot<DbModule>('src/common/db.js')
 const utilsModule = loadFromRoot<UtilsModule>('src/common/utils.js')
 const cryptoModule = loadFromRoot<CryptoModule>('src/common/crypto.js')
@@ -166,6 +174,7 @@ const voterModule = loadFromRoot<VoterModule>('src/voter/voter.js')
 const tallyModule = loadFromRoot<TallyModule>('src/ledger/tally.js')
 const auditModule = loadFromRoot<AuditModule>('src/audit/audit.js')
 const tokenModule = loadFromRoot<TokenModule>('src/ra/tokenService.js')
+const verifyModule = loadFromRoot<VerifyModule>('src/ledger/verify.js')
 
 const dbExports = dbModule as unknown as {
   listElections: () => ElectionRecord[]
@@ -252,6 +261,14 @@ const {
 const { runTally } = tallyExports
 const { auditElection } = auditExports
 const { issueToken } = tokenExports
+const { verifyReceiptStatus } = verifyModule as unknown as {
+  verifyReceiptStatus: (receiptId: string) => {
+    valid?: boolean
+    ledgerIndex?: number | null
+    commitment?: string | null
+    electionId?: string | null
+  }
+}
 
 export type ElectionRecord = {
   id: string
@@ -508,6 +525,21 @@ export const fetchLedgerEntries = async (electionId?: string): Promise<LedgerEnt
     : db.prepare(`${baseQuery} ORDER BY "index" ASC`).all()
 
   return rows
+}
+
+export const verifyReceipt = async (receiptId: string): Promise<ReceiptVerification> => {
+  if (!receiptId) {
+    throw new Error('receiptId is required to verify a receipt')
+  }
+
+  const outcome = verifyReceiptStatus(receiptId) ?? { valid: false }
+
+  return {
+    valid: Boolean(outcome.valid),
+    ledgerIndex: outcome.ledgerIndex ?? null,
+    commitment: outcome.commitment ?? null,
+    electionId: outcome.electionId ?? null
+  }
 }
 
 export const runElectionTally = async (

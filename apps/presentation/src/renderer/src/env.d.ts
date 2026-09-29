@@ -53,6 +53,25 @@ type ThresholdDetails = {
   }
 }
 
+type ReceiptVerification = {
+  valid: boolean
+  ledgerIndex: number | null
+  commitment: string | null
+  electionId: string | null
+}
+
+type TokenRecord = {
+  tokenId: string
+  electionId: string
+  voterId: string
+  issuedAt: string
+  used: boolean
+}
+
+type TallyResult = Record<string, unknown>
+
+type AuditResult = Record<string, unknown>
+
 type BackendAPI = {
   overview: () => Promise<OverviewSnapshot>
   listElections: () => Promise<ElectionSummary[]>
@@ -64,25 +83,26 @@ type BackendAPI = {
     choices: string[]
   }) => Promise<ElectionSummary>
   deleteElection: (payload: { electionId: string }) => Promise<void>
-  generateKeys: (payload: { electionId: string }) => Promise
+  generateKeys: (payload: { electionId: string }) => Promise<void>
   getThreshold: (payload: { electionId: string }) => Promise<ThresholdDetails>
-  listTokens: () => Promise<[]>
-  issueToken: (payload: { electionId: string; voterId: string }) => Promise
+  listTokens: () => Promise<TokenRecord[]>
+  issueToken: (payload: { electionId: string; voterId: string }) => Promise<void>
   castBallot: (payload: {
     electionId: string
     voterId: string
     choice: string
     tokenJwt: string
     ledgerUrl?: string
-  }) => Promise
+  }) => Promise<void>
   listLedger: (payload?: { electionId?: string }) => Promise<LedgerEntry[]>
-  runTally: (payload: { electionId: string; sharePaths?: string[] }) => Promise
+  verifyReceipt: (payload: { receiptId: string }) => Promise<ReceiptVerification>
+  runTally: (payload: { electionId: string; sharePaths?: string[] }) => Promise<TallyResult>
   runAudit: (payload: {
     electionId: string
     sharePaths?: string[]
     sampleRate?: number
     minSample?: number
-  }) => Promise
+  }) => Promise<AuditResult>
 }
 
 declare global {

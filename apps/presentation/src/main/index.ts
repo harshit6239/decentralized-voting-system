@@ -32,6 +32,7 @@ const registerIpcHandlers = (): void => {
   expose('token:issue', (args) => backend.issueVoterToken(args))
   expose('ballot:cast', (args) => backend.castBallotWithToken(args))
   expose('ledger:list', (args) => backend.fetchLedgerEntries(args?.electionId))
+  expose('receipt:verify', (args) => backend.verifyReceipt(args?.receiptId))
   expose('tally:run', (args) => backend.runElectionTally(args?.electionId, args?.sharePaths))
   expose('audit:run', (args) =>
     backend.runElectionAudit(args?.electionId, {

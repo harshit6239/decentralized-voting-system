@@ -1,12 +1,16 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState, type JSX } from 'react'
 import './App.css'
 
-type TabKey = 'overview' | 'elections' | 'tokens' | 'ledger' | 'tally-audit'
+type TabKey = 'overview' | 'elections' | 'tokens' | 'receipts' | 'ledger' | 'tally-audit'
 
 type ElectionSummary = Awaited<ReturnType<typeof window.api.listElections>>[number]
 type OverviewSnapshot = Awaited<ReturnType<typeof window.api.overview>>
 type LedgerEntry = Awaited<ReturnType<typeof window.api.listLedger>>[number]
 type ThresholdDetails = Awaited<ReturnType<typeof window.api.getThreshold>>
+type ReceiptVerification = Awaited<ReturnType<typeof window.api.verifyReceipt>>
+type TokenRecord = Awaited<ReturnType<typeof window.api.listTokens>>[number]
+type TallyResult = Awaited<ReturnType<typeof window.api.runTally>>
+type AuditResult = Awaited<ReturnType<typeof window.api.runAudit>>
 
 const emptyThreshold: ThresholdDetails = {
   keyFile: '',
@@ -23,11 +27,13 @@ function App(): JSX.Element {
   const [elections, setElections] = useState<ElectionSummary[]>([])
   const [selectedElectionId, setSelectedElectionId] = useState<string>('')
   const [threshold, setThreshold] = useState<ThresholdDetails>(emptyThreshold)
-  const [tokens, setTokens] = useState<any[]>([])
+  const [tokens, setTokens] = useState<TokenRecord[]>([])
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [ledgerFilter, setLedgerFilter] = useState<string>('')
-  const [tallyResult, setTallyResult] = useState<any | null>(null)
-  const [auditResult, setAuditResult] = useState<any | null>(null)
+  const [tallyResult, setTallyResult] = useState<TallyResult | null>(null)
+  const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
+  const [receiptIdInput, setReceiptIdInput] = useState<string>('')
+  const [receiptResult, setReceiptResult] = useState<ReceiptVerification | null>(null)
   const [feedback, setFeedback] = useState<string>('')
   const [errorText, setErrorText] = useState<string>('')
   const [busy, setBusy] = useState<boolean>(false)
@@ -348,6 +354,35 @@ function App(): JSX.Element {
     }
   }
 
+  const handleVerifyReceipt = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault()
+    const trimmedId = receiptIdInput.trim()
+    if (!trimmedId) {
+      reportError('Enter a receipt identifier to verify')
+      return
+    }
+
+    clearMessages()
+    setReceiptResult(null)
+    setBusy(true)
+    try {
+      const result = await window.api.verifyReceipt({ receiptId: trimmedId })
+      setReceiptResult(result)
+      if (result.valid) {
+        const indexLabel =
+          typeof result.ledgerIndex === 'number' ? ` for ledger entry ${result.ledgerIndex}` : ''
+        notify(`Receipt verified${indexLabel}`)
+      } else {
+        reportError('Receipt not found or invalid')
+      }
+    } catch (error) {
+      setReceiptResult(null)
+      reportError((error as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const ledgerCount = useMemo(() => ledgerEntries.length, [ledgerEntries])
 
   return (
@@ -372,6 +407,9 @@ function App(): JSX.Element {
             }}
           >
             Tokens
+          </button>
+          <button className={tab === 'receipts' ? 'active' : ''} onClick={() => setTab('receipts')}>
+            Receipts
           </button>
           <button
             className={tab === 'ledger' ? 'active' : ''}
@@ -606,6 +644,67 @@ function App(): JSX.Element {
           </section>
         )}
 
+        {tab === 'receipts' && (
+          <section className="panel">
+            <h2>Receipt Verification</h2>
+            <form className="stack" onSubmit={handleVerifyReceipt}>
+              <label>
+                Receipt id
+                <input
+                  type="text"
+                  value={receiptIdInput}
+                  onChange={(event) => setReceiptIdInput(event.target.value)}
+                  placeholder="receipt-123"
+                />
+              </label>
+              <button type="submit" disabled={busy}>
+                Verify receipt
+              </button>
+            </form>
+
+            {receiptResult && (
+              <section className="section">
+                <div className="section-body">
+                  <div className="stack compact">
+                    <div>
+                      <strong>Status:</strong> {receiptResult.valid ? 'Valid' : 'Invalid'}
+                    </div>
+                    <div>
+                      <strong>Ledger entry:</strong>{' '}
+                      {typeof receiptResult.ledgerIndex === 'number'
+                        ? receiptResult.ledgerIndex
+                        : '—'}
+                    </div>
+                    <div>
+                      <strong>Election:</strong> {receiptResult.electionId ?? '—'}
+                    </div>
+                    <div>
+                      <strong>Commitment:</strong>{' '}
+                      {receiptResult.commitment ? (
+                        <span className="mono">{receiptResult.commitment}</span>
+                      ) : (
+                        '—'
+                      )}
+                    </div>
+                    {receiptResult.valid && receiptResult.electionId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLedgerFilter(receiptResult.electionId ?? '')
+                          setTab('ledger')
+                          void refreshLedger(receiptResult.electionId ?? undefined)
+                        }}
+                      >
+                        View in ledger
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+          </section>
+        )}
+
         {tab === 'ledger' && (
           <section className="panel">
             <h2>Ledger</h2>
@@ -764,7 +863,7 @@ function App(): JSX.Element {
                     ))}
                   </select>
                 </label>
-                <label>
+                {/* <label>
                   Ledger URL (optional)
                   <input
                     type="text"
@@ -774,7 +873,7 @@ function App(): JSX.Element {
                     }
                     placeholder="http://localhost:4000/submit"
                   />
-                </label>
+                </label> */}
                 <button className="full" type="submit" disabled={busy}>
                   Submit ballot
                 </button>
